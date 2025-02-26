@@ -1,0 +1,48 @@
+{
+	"schemaVersion": 1,
+	"id": "sharedinventory",
+	"version": "${version}",
+	"name": "SharedInventory",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/sharedinventory/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			{
+				"value": "sharedinventory.SharedInventory",
+				"adapter": "kotlin"
+			}
+		],
+		"client": [
+			{
+				"value": "sharedinventory.SharedInventoryClient",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"mixins": [
+		"sharedinventory.mixins.json",
+		{
+			"config": "sharedinventory.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.16.10",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*",
+		"fabric-language-kotlin": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}

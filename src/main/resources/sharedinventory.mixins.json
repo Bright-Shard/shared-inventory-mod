@@ -1,0 +1,13 @@
+{
+	"required": true,
+	"package": "sharedinventory.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"PlayerInventoryMixin",
+		"PlayerEntityMixin",
+		"ServerPlayerEntityMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
