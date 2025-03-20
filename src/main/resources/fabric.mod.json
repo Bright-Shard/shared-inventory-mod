@@ -42,7 +42,6 @@
 		"fabric-api": "*",
 		"fabric-language-kotlin": "*"
 	},
-	"suggests": {
-		"another-mod": "*"
-	}
+	"accessWidener": "sharedinventory.accesswidener",
+	"suggests": {}
 }

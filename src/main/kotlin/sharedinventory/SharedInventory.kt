@@ -1,47 +1,50 @@
 package sharedinventory
 
 import com.mojang.brigadier.Command
+import com.mojang.brigadier.arguments.StringArgumentType
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
-import net.fabricmc.fabric.api.entity.FakePlayer
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.entity.player.PlayerInventory
-import net.minecraft.item.ItemStack
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.minecraft.server.command.CommandManager
 import net.minecraft.text.Text
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import sharedinventory.utils.BooleanArgumentType
-import sharedinventory.utils.BooleanEnum
 
-object SharedInventory : ModInitializer {
+object SharedInventory: ModInitializer {
     val LOGGER: Logger = LoggerFactory.getLogger("sharedinventory")
 
 	override fun onInitialize() {
-		BooleanArgumentType.load()
+		ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
+			if (Config.enabled) {
+				val player = handler.player
+				Config.unsharedPlayerInventories[player.uuid] = PlayerlessInventory(player.inventory)
+				Config.sharedInventory.sync(player.inventory)
+			}
+		}
 
 		CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
 			dispatcher.register(
 				CommandManager.literal("shareInventory")
 					.requires { source -> source.hasPermissionLevel(4) }
 					.then(
-						CommandManager.argument("enabled", BooleanArgumentType)
+						CommandManager.argument("enabled", StringArgumentType.word())
+							.suggests(BooleanArgumentSuggester)
 							.executes { command ->
-								val enabled = command.getArgument("enabled", BooleanEnum::class.java).toBoolean()
 								val server = command.source.server
-								val label = "Shared inventory ${if (enabled) "enabled" else "disabled"}"
-
-								LOGGER.info("shareInventory called: $label")
-								LOGGER.info("Server: ${server.name}")
-								server.playerManager.broadcast(Text.of(label), true)
-
-								if (Config.player == null) {
-									// TODO: Store separate data for each server
-									// TODO: Persist inventory across reload
-									LOGGER.info("Generating fake player and inventory...")
-									Config.player = FakePlayer.get(server.worlds.first())
-									Config.inv = PlayerInventory(Config.player)
+								val enabledString = command.getArgument("enabled", String::class.java)
+								val enabled = when (enabledString) {
+									"true" -> true
+									"false" -> false
+									else -> {
+										command.source.sendFeedback(
+											{ Text.of("Requires 'true' or 'false'.") },
+											false
+										)
+                                        return@executes 1
+									};
 								}
+
+								LOGGER.info("shareInventory called, enabled: $enabled")
 
 								if (enabled != Config.enabled) {
 									LOGGER.info("Changing inventories")
@@ -49,38 +52,17 @@ object SharedInventory : ModInitializer {
 
 									if (enabled) {
 										for (player in server.playerManager.playerList) {
-											val iPlayer = player as IPlayerEntity
-											val iServerPlayer = player as IServerPlayerEntity
-
-											iPlayer.setInventory(Config.inv!!)
-
-											iServerPlayer.getScreenHandlerSyncHandler().updateSlot(
-												player.currentScreenHandler,
-												0,
-												ItemStack.EMPTY
-											)
-											iServerPlayer.getScreenHandlerSyncHandler().updateState(
-												player.currentScreenHandler,
-												Config.inv!!.main,
-												ItemStack.EMPTY,
-												intArrayOf()
-											)
+											Config.unsharedPlayerInventories[player.uuid] = PlayerlessInventory(player.inventory)
+											Config.sharedInventory.sync(player.inventory)
 										}
 									} else {
 										for (player in server.playerManager.playerList) {
-											val iPlayer = player as IPlayerEntity
-											val iServerPlayer = player as IServerPlayerEntity
-
-											iPlayer.resetInventory()
-
-											iServerPlayer.getScreenHandlerSyncHandler().updateState(
-												player.currentScreenHandler,
-												Config.inv!!.main,
-												ItemStack.EMPTY,
-												intArrayOf()
-											)
+											Config.unsharedPlayerInventories[player.uuid]?.sync(player.inventory)
 										}
 									}
+
+									val label = "Shared inventory ${if (enabled) "enabled" else "disabled"}"
+									server.playerManager.broadcast(Text.of(label), true)
 								}
 
 								Command.SINGLE_SUCCESS

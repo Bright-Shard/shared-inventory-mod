@@ -3,9 +3,7 @@
 	"package": "sharedinventory.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"PlayerInventoryMixin",
-		"PlayerEntityMixin",
-		"ServerPlayerEntityMixin"
+		"PlayerManagerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
